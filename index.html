@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Job Board</title>
+    <style>
+      /* CSS styles */
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-position: 100%;
+        color: #fff;
+      }
+      header {
+        background-color: #333;
+        color: #fff;
+        padding: 10px;
+        text-align: center;
+      }
+      .container {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 0 20px;
+      }
+      form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 20px;
+        background-color: #00000069;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      label {
+        margin-bottom: 5px;
+      }
+      input[type="text"],
+      input[type="password"],
+      button {
+        margin-bottom: 10px;
+        padding: 10px;
+        /* width: 100%; */
+        border: 1px solid rgb(0, 0, 0);
+        border-radius: 5px;
+      }
+      button {
+        cursor: pointer;
+        background-color: rgb(48, 182, 245);
+        color: #fff;
+        border: none;
+      }
+      button:hover {
+        background-color: rgb(0, 132, 194);
+      }
+      .error-message {
+        color: red;
+        margin-bottom: 10px;
+      }
+      .success-message {
+        color: green;
+        margin-bottom: 10px;
+      }
+      .job-listing {
+        background-color: #00000069;
+        margin-bottom: 20px;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .filter {
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .applied-jobs {
+        margin-top: 50px;
+        border-top: 2px solid #333;
+        padding-top: 20px;
+      }
+      .job-title {
+        font-size: 1.2rem;
+        margin-bottom: 5px;
+      }
+      .job-details {
+        font-size: 1rem;
+        color: #666;
+        margin-bottom: 10px;
+      }
+      .job-buttons {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+      }
+      .applied-jobs ul {
+        list-style-type: none;
+        padding: 0;
+      }
+      .applied-jobs li {
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+        background: #000000;
+        text-shadow: #000000;
+      }
+    </style>
+  </head>
+  <body id="body">
+    <header>
+      <h1>Job Board</h1>
+    </header>
+    <div class="container" id="app">
+      <div v-if="!loggedIn">
+        <h2>Login</h2>
+        <form>
+          <label for="username">Username:</label>
+          <input type="text" id="username" v-model="username" required />
+          <label for="password">Password:</label>
+          <input type="password" id="password" v-model="password" required />
+          <button @click.prevent="login">Login</button>
+          <div v-if="loginError" class="error-message">{{ loginError }}</div>
+        </form>
+      </div>
+      <div v-else>
+        <div class="applied-jobs">
+          <h2>Applied Jobs</h2>
+          <ul id="appliedJobsList">
+            <li v-for="(job, index) in appliedJobs" :key="index">
+              {{ job.title }}
+            </li>
+            <span class="delete-button" onclick="deleteJob(index)">Delete</span>
+          </ul>
+        </div>
+        <div class="filter">
+          <label for="category">Category:</label>
+          <select id="category" v-model="category">
+            <option value="all">All</option>
+            <option value="it">IT</option>
+            <option value="marketing">Marketing</option>
+            <option value="finance">Finance</option>
+          </select>
+          <label for="location">Location:</label>
+          <select id="location" v-model="location">
+            <option value="all">All</option>
+            <option value="new-york">New York</option>
+            <option value="los-angeles">Los Angeles</option>
+            <option value="chicago">Chicago</option>
+          </select>
+          <button @click.prevent="filterJobs">Filter</button>
+          <button @click.prevent="logout">Logout</button>
+        </div>
+        <div id="jobListingsContainer">
+          <div
+            v-for="(job, index) in filteredJobs"
+            :key="index"
+            class="job-listing"
+          >
+            <h2>{{ job.title }}</h2>
+            <p>Category: {{ job.category }}, Location: {{ job.location }}</p>
+            <button @click.prevent="applyJob(index)">Apply</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script>
+      // Dummy user database
+      const users = [{ username: "tanvi", password: "tanvi" }];
+
+      new Vue({
+        el: "#app",
+        data() {
+          return {
+            username: "",
+            password: "",
+            loggedIn: sessionStorage.getItem("loggedIn") === "true",
+            loginError: "",
+            category: "all",
+            location: "all",
+            jobListings: [
+              { title: "Web Developer", category: "it", location: "new-york" },
+              {
+                title: "Marketing Manager",
+                category: "marketing",
+                location: "los-angeles",
+              },
+              {
+                title: "Financial Analyst",
+                category: "finance",
+                location: "chicago",
+              },
+              {
+                title: "Software Engineer",
+                category: "it",
+                location: "new-york",
+              },
+              {
+                title: "Sales Representative",
+                category: "marketing",
+                location: "los-angeles",
+              },
+              { title: "Accountant", category: "finance", location: "chicago" },
+            ],
+            appliedJobs: [],
+          };
+        },
+        computed: {
+          filteredJobs() {
+            let filteredJobs = this.jobListings;
+            if (this.category !== "all") {
+              filteredJobs = filteredJobs.filter(
+                (job) => job.category === this.category
+              );
+            }
+            if (this.location !== "all") {
+              filteredJobs = filteredJobs.filter(
+                (job) => job.location === this.location
+              );
+            }
+            return filteredJobs;
+          },
+        },
+        methods: {
+          login() {
+            const user = users.find(
+              (user) =>
+                user.username === this.username &&
+                user.password === this.password
+            );
+            if (user) {
+              this.loggedIn = true;
+              sessionStorage.setItem("loggedIn", "true");
+              this.loginError = "";
+            } else {
+              this.loginError = "Invalid username or password.";
+            }
+          },
+          logout() {
+            this.loggedIn = false;
+            sessionStorage.removeItem("loggedIn");
+            this.username = "";
+            this.password = "";
+            this.loginError = "";
+            this.category = "all";
+            this.location = "all";
+            this.appliedJobs = [];
+          },
+          filterJobs() {
+            // Filter jobs based on category and location
+          },
+          applyJob(index) {
+            const job = this.filteredJobs[index];
+            // Check if the job is already applied for
+            if (
+              !this.appliedJobs.find(
+                (appliedJob) => appliedJob.title === job.title
+              )
+            ) {
+              this.appliedJobs.push(job);
+            } else {
+              alert("You have already applied for this job.");
+            }
+          },
+          deleteJob(index) {
+            this.appliedJobs.splice(index, 1);
+          },
+        },
+      });
+
+      async function setRandomBackgroundImage(elementId, keyword) {
+        const element = document.getElementById(elementId);
+        const accessKey = "uWfrJ5iTDNxMYZ53esF7oQ4yYz7oRwfraxESLsNE7CE"; // Replace with your Unsplash API access key
+        const unsplashURL = `https://api.unsplash.com/search/photos?page=1&query=${encodeURIComponent(
+          keyword
+        )}&client_id=${accessKey}`;
+
+        try {
+          const response = await fetch(unsplashURL);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.results.length > 0) {
+              // Select a random image from the results
+              const randomIndex = Math.floor(
+                Math.random() * data.results.length
+              );
+              const imageUrl = data.results[randomIndex].urls.regular;
+
+              // Set the selected image as the background
+              element.style.backgroundImage = `url(${imageUrl})`;
+              element.style.backgroundSize = "cover"; // Ensures the image covers the entire element
+              element.style.backgroundPosition = "center"; // Centers the background image
+            } else {
+              console.error("No images found for the given keyword.");
+            }
+          } else {
+            console.error(
+              "Failed to fetch images from Unsplash:",
+              response.status,
+              response.statusText
+            );
+          }
+        } catch (error) {
+          console.error("Error fetching image from Unsplash:", error);
+        }
+      }
+
+      // Call the function to set the background image
+      setRandomBackgroundImage("body", "jobs");
+    </script>
+  </body>
+</html>
